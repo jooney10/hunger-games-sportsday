@@ -9,6 +9,8 @@
   let player = null;
   let voteSelection = null;
   let lastGameStatus = {};
+  let revealHoldTimer = null;
+  let revealFadeTimer = null;
 
   const bootEl = document.getElementById('boot');
   const bootMsg = document.getElementById('boot-msg');
@@ -97,6 +99,10 @@
     return games.find((g) => g.status === 'live');
   }
 
+  function findPausedGame() {
+    return games.find((g) => g.status === 'paused');
+  }
+
   function findNextPendingGame() {
     return sortedGames().find((g) => g.status === 'pending');
   }
@@ -110,6 +116,17 @@
       statusSub.textContent = voted
         ? `Watching Game ${live.order}: ${live.name}. Good luck, Tribute.`
         : `Cast your vote for Game ${live.order} now!`;
+      return;
+    }
+
+    const paused = findPausedGame();
+    if (paused) {
+      const voted = player.votes[paused.id];
+      statusIcon.textContent = '⚔️';
+      statusTitle.textContent = 'Game In Progress';
+      statusSub.textContent = voted
+        ? `Voting is closed. Your pick: ${districtById(voted)?.team ?? ''}. Good luck, Tribute.`
+        : 'Voting is closed for this round — the Games are underway.';
       return;
     }
     const next = findNextPendingGame();
@@ -133,6 +150,7 @@
 
       let badge = '<span class="badge badge-pending">Pending</span>';
       if (game.status === 'live') badge = '<span class="badge badge-live">● Live</span>';
+      if (game.status === 'paused') badge = '<span class="badge badge-paused">❚❚ Voting Closed</span>';
       if (game.status === 'ended') badge = '<span class="badge badge-ended">Ended</span>';
 
       let winnerLine = '';
@@ -145,6 +163,11 @@
         winnerLine = voted
           ? `<div class="game-winner">Your vote: ${districtById(voted)?.team ?? ''}</div>`
           : `<div class="game-winner">Vote now above ↑</div>`;
+      } else if (game.status === 'paused') {
+        const voted = player.votes[game.id];
+        winnerLine = voted
+          ? `<div class="game-winner">Your vote: ${districtById(voted)?.team ?? ''}</div>`
+          : `<div class="game-winner">No vote cast — voting closed</div>`;
       } else if (player.votes[game.id]) {
         winnerLine = `<div class="game-winner">Your vote: ${districtById(player.votes[game.id])?.team ?? ''}</div>`;
       }
@@ -196,7 +219,7 @@
     wrTeam.textContent = w.team;
 
     if (myVote === game.winner) {
-      wrNote.textContent = '✓ Your vote was true — +1 point!';
+      wrNote.textContent = '✓ The odds were in your favour — +1 point!';
       wrNote.style.color = 'var(--color-success)';
       wrNote.style.borderColor = 'rgba(88, 201, 141, 0.5)';
     } else if (myVote) {
@@ -209,12 +232,17 @@
       wrNote.style.borderColor = 'var(--color-border)';
     }
 
+    // Both timers must be cleared: a stale fade-out from a previous round
+    // would otherwise hide this reveal moments after it appears.
+    clearTimeout(revealHoldTimer);
+    clearTimeout(revealFadeTimer);
+
     winnerReveal.classList.remove('leaving');
     winnerReveal.hidden = false;
-    clearTimeout(showWinnerReveal.timer);
-    showWinnerReveal.timer = setTimeout(() => {
+
+    revealHoldTimer = setTimeout(() => {
       winnerReveal.classList.add('leaving');
-      setTimeout(() => {
+      revealFadeTimer = setTimeout(() => {
         winnerReveal.hidden = true;
       }, 500);
     }, REVEAL_DURATION);

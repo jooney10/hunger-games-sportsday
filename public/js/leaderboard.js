@@ -1,26 +1,27 @@
 (function leaderboardApp() {
   const socket = io();
 
-  let districts = [];
   let games = [];
 
   const tbody = document.getElementById('leaderboard-body');
   const liveStrip = document.getElementById('live-strip');
   const lastUpdated = document.getElementById('last-updated');
 
-  function districtById(id) {
-    return districts.find((d) => d.id === id);
-  }
-
   function renderLiveStrip() {
     liveStrip.innerHTML = '';
     const live = games.find((g) => g.status === 'live');
+    const paused = games.find((g) => g.status === 'paused');
     const ended = games.filter((g) => g.status === 'ended').length;
 
     if (live) {
       const chip = document.createElement('span');
       chip.className = 'badge badge-live';
-      chip.textContent = `● LIVE: Game ${live.order} — ${live.name}`;
+      chip.textContent = `● VOTING OPEN: Game ${live.order} — ${live.name}`;
+      liveStrip.appendChild(chip);
+    } else if (paused) {
+      const chip = document.createElement('span');
+      chip.className = 'badge badge-paused';
+      chip.textContent = `⚔️ IN PROGRESS: Game ${paused.order} — ${paused.name}`;
       liveStrip.appendChild(chip);
     } else {
       const chip = document.createElement('span');
@@ -41,20 +42,16 @@
     tbody.innerHTML = '';
     if (leaderboard.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join…</td></tr>';
+        '<tr><td colspan="3" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join…</td></tr>';
       return;
     }
     leaderboard.forEach((row, index) => {
-      const pred = districtById(row.overallPrediction);
       const tr = document.createElement('tr');
       tr.className = row.rank <= 3 ? `rank-${row.rank}` : '';
       tr.style.setProperty('--i', index);
       tr.innerHTML = `
         <td class="rank-cell">${rankCell(row.rank)}</td>
         <td class="lb-name">${row.name}</td>
-        <td>
-          ${pred ? `<span class="prediction-chip" style="--chip-color:${pred.color}"><span class="district-dot" style="--card-color:${pred.color};width:10px;height:10px;"></span>${pred.district} · ${pred.team}</span>` : '—'}
-        </td>
         <td class="score-cell">${row.score}</td>
       `;
       tbody.appendChild(tr);
@@ -82,7 +79,6 @@
       fetch('/api/state').then((r) => r.json()),
       fetch('/api/leaderboard').then((r) => r.json()),
     ]);
-    districts = stateRes.districts;
     games = stateRes.games;
     renderLiveStrip();
     renderLeaderboard(leaderboardRes);

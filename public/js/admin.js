@@ -71,8 +71,8 @@
     return next ? next.id : null;
   }
 
-  function anyLive() {
-    return games.some((g) => g.status === 'live');
+  function anyInPlay() {
+    return games.some((g) => g.status === 'live' || g.status === 'paused');
   }
 
   function districtOptionsHtml(selected) {
@@ -93,6 +93,18 @@
     });
   }
 
+  function setPaused(gameId, paused) {
+    const event = paused ? 'admin:pauseGame' : 'admin:resumeGame';
+    socket.emit(event, { token, gameId }, (res) => {
+      if (!res.ok) {
+        if (res.error === 'Not authorized.') return requireReauth();
+        showToast(res.error || 'Could not change voting state.');
+        return;
+      }
+      showToast(paused ? 'Voting paused — no new picks.' : 'Voting reopened.');
+    });
+  }
+
   function endGame(gameId, winnerId) {
     if (!winnerId) {
       showToast('Select a winning district first.');
@@ -110,24 +122,31 @@
     if (controlPanel.hidden) return;
     adminGamesList.innerHTML = '';
     const eligibleId = nextUpGameId();
-    const liveExists = anyLive();
+    const inPlay = anyInPlay();
 
     sortedGames().forEach((game, index) => {
       const row = document.createElement('div');
-      row.className = 'game-row' + (game.status === 'live' ? ' is-live' : '');
+      const isInPlay = game.status === 'live' || game.status === 'paused';
+      row.className = 'game-row' + (isInPlay ? ' is-live' : '');
       row.style.setProperty('--i', index);
 
       let badge = '<span class="badge badge-pending">Pending</span>';
-      if (game.status === 'live') badge = '<span class="badge badge-live">● Live</span>';
+      if (game.status === 'live') badge = '<span class="badge badge-live">● Voting Open</span>';
+      if (game.status === 'paused') badge = '<span class="badge badge-paused">❚❚ Voting Paused</span>';
       if (game.status === 'ended') badge = '<span class="badge badge-ended">Ended</span>';
 
       let controls = '';
       if (game.status === 'pending') {
-        const eligible = game.id === eligibleId && !liveExists;
+        const eligible = game.id === eligibleId && !inPlay;
         controls = `<button class="btn btn-primary go-live-btn" data-game="${game.id}" ${eligible ? '' : 'disabled'}>Go Live with Game ${game.order}</button>`;
-      } else if (game.status === 'live') {
+      } else if (isInPlay) {
+        const pauseBtn =
+          game.status === 'live'
+            ? `<button class="btn pause-btn" data-game="${game.id}" data-paused="true">❚❚ Pause Voting</button>`
+            : `<button class="btn pause-btn" data-game="${game.id}" data-paused="false">▶ Resume Voting</button>`;
         controls = `
           <div class="winner-select">
+            ${pauseBtn}
             <select data-game="${game.id}" class="winner-dropdown">
               <option value="">Select winner…</option>
               ${districtOptionsHtml(null)}
@@ -151,6 +170,9 @@
 
     adminGamesList.querySelectorAll('.go-live-btn').forEach((btn) => {
       btn.addEventListener('click', () => goLive(btn.dataset.game));
+    });
+    adminGamesList.querySelectorAll('.pause-btn').forEach((btn) => {
+      btn.addEventListener('click', () => setPaused(btn.dataset.game, btn.dataset.paused === 'true'));
     });
     adminGamesList.querySelectorAll('.end-game-btn').forEach((btn) => {
       btn.addEventListener('click', () => {

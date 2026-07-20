@@ -299,6 +299,12 @@ main { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: var(--s
 .badge-ended { color: var(--color-success); border-color: rgba(88, 201, 141, 0.35); }
 .badge-pending { color: var(--color-text-dim); }
 
+.badge-paused {
+  color: #1c0800;
+  background: linear-gradient(135deg, var(--color-gold-bright), #c9922b);
+  border-color: rgba(255, 215, 106, 0.55);
+}
+
 @keyframes pulse-live {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220, 20, 60, 0.45); }
   50% { box-shadow: 0 0 0 9px rgba(220, 20, 60, 0); }
@@ -611,7 +617,17 @@ tbody tr.rank-3 { background: linear-gradient(90deg, rgba(205, 127, 50, 0.10), t
   font-weight: 600;
 }
 
-.score-cell { font-family: var(--font-display); font-size: 1.7rem; color: var(--color-gold-bright); text-shadow: 0 0 14px rgba(255, 170, 60, 0.35); }
+.score-cell {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  color: var(--color-gold-bright);
+  text-shadow: 0 0 14px rgba(255, 170, 60, 0.35);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Rank column stays tight so the name gets the space */
+.rank-cell { width: 1%; white-space: nowrap; }
 
 .live-strip { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; margin-bottom: var(--space-md); }
 .live-strip .badge { font-size: 1rem; padding: 0.6rem 1.3rem; }

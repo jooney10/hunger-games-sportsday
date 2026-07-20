@@ -25,6 +25,10 @@ const DISTRICTS = [
 ];
 const DISTRICT_IDS = new Set(DISTRICTS.map((d) => d.id));
 
+// A game that has started but not yet been scored. Blocks the next game from
+// going live, and is the only state an admin may end a round from.
+const IN_PLAY_STATUSES = new Set(['live', 'paused']);
+
 const GAME_NAMES = [
   'Cornucopia Dash',
   'May the fort be ever in your favour',
@@ -199,9 +203,9 @@ io.on('connection', (socket) => {
     if (!game || game.status !== 'pending') {
       return ack({ ok: false, error: 'That game cannot be started right now.' });
     }
-    const alreadyLive = db.data.games.some((g) => g.status === 'live');
-    if (alreadyLive) {
-      return ack({ ok: false, error: 'Another game is already live.' });
+    const alreadyRunning = db.data.games.some((g) => IN_PLAY_STATUSES.has(g.status));
+    if (alreadyRunning) {
+      return ack({ ok: false, error: 'Another game is already in play.' });
     }
     const priorUnfinished = db.data.games.some(
       (g) => g.order < game.order && g.status !== 'ended'
@@ -216,14 +220,46 @@ io.on('connection', (socket) => {
     ack({ ok: true });
   });
 
-  socket.on('admin:endGame', (payload, callback) => {
+  socket.on('admin:pauseGame', (payload, callback) => {
     const ack = typeof callback === 'function' ? callback : () => {};
     if (!isValidAdmin(payload?.token)) {
       return ack({ ok: false, error: 'Not authorized.' });
     }
     const game = db.data.games.find((g) => g.id === payload?.gameId);
     if (!game || game.status !== 'live') {
-      return ack({ ok: false, error: 'That game is not currently live.' });
+      return ack({ ok: false, error: 'That game is not currently open for voting.' });
+    }
+
+    game.status = 'paused';
+    db.write();
+    broadcastState();
+    ack({ ok: true });
+  });
+
+  socket.on('admin:resumeGame', (payload, callback) => {
+    const ack = typeof callback === 'function' ? callback : () => {};
+    if (!isValidAdmin(payload?.token)) {
+      return ack({ ok: false, error: 'Not authorized.' });
+    }
+    const game = db.data.games.find((g) => g.id === payload?.gameId);
+    if (!game || game.status !== 'paused') {
+      return ack({ ok: false, error: 'That game is not currently paused.' });
+    }
+
+    game.status = 'live';
+    db.write();
+    broadcastState();
+    ack({ ok: true });
+  });
+
+  socket.on('admin:endGame', (payload, callback) => {
+    const ack = typeof callback === 'function' ? callback : () => {};
+    if (!isValidAdmin(payload?.token)) {
+      return ack({ ok: false, error: 'Not authorized.' });
+    }
+    const game = db.data.games.find((g) => g.id === payload?.gameId);
+    if (!game || !IN_PLAY_STATUSES.has(game.status)) {
+      return ack({ ok: false, error: 'That game is not currently in play.' });
     }
     if (!DISTRICT_IDS.has(payload?.winnerId)) {
       return ack({ ok: false, error: 'Please select a valid winning district.' });
