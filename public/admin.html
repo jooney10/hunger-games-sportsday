@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Reassured Sports Day</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .winner-select {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .danger-zone {
+      border: 1px dashed var(--color-crimson);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      margin-top: var(--space-lg);
+    }
+  </style>
+</head>
+<body>
+  <div class="embers" id="embers"></div>
+
+  <div class="page">
+    <header class="top-bar">
+      <div class="brand"><span class="mockingjay">🕊️</span> CAPITOL CONTROL ROOM</div>
+      <a class="btn btn-ghost" href="/leaderboard" style="font-size:0.85rem;padding:0.5rem 1rem;">Leaderboard →</a>
+    </header>
+
+    <main>
+      <!-- PIN gate -->
+      <section id="pin-screen" class="pin-screen">
+        <div class="card">
+          <h1 class="font-display" style="font-size:2rem;">CAPITOL ACCESS</h1>
+          <p class="hero-sub" style="font-size:0.95rem;">Enter the Admin PIN to control the Games.</p>
+          <form id="pin-form">
+            <div class="field">
+              <label for="pin-input">PIN</label>
+              <input type="password" id="pin-input" autocomplete="off" required />
+            </div>
+            <p class="error-text" id="pin-error" hidden></p>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Unlock</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Control panel -->
+      <section id="control-panel" hidden>
+        <div class="card">
+          <h2 class="font-display" style="font-size:1.6rem;">Game Control</h2>
+          <p class="hero-sub" style="font-size:0.9rem;">Games must be run in strict order. Only the next pending game can go live.</p>
+          <div class="games-list" id="admin-games-list" style="margin-top:var(--space-md);"></div>
+        </div>
+
+        <div class="danger-zone">
+          <h3 class="font-display" style="color:var(--color-crimson);font-size:1.3rem;">Danger Zone</h3>
+          <p class="hero-sub" style="font-size:0.9rem;">Wipes all players, votes, and game progress. Use only for testing or a full restart.</p>
+          <button class="btn btn-danger" id="reset-btn">Reset All Data</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-root"></div>
+
+  <script src="/js/embers.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

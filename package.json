@@ -1,0 +1,16 @@
+{
+  "name": "hunger-games-sportsday",
+  "version": "1.0.0",
+  "description": "Real-time Hunger Games themed Sports Day voting app",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "lowdb": "^7.0.1",
+    "socket.io": "^4.7.5"
+  }
+}
