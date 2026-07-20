@@ -2,12 +2,16 @@
   const socket = io();
 
   const STORAGE_KEY = 'sportsday_playerId';
+  const REVEAL_DURATION = 4200;
 
   let districts = [];
   let games = [];
   let player = null;
   let voteSelection = null;
+  let lastGameStatus = {};
 
+  const bootEl = document.getElementById('boot');
+  const bootMsg = document.getElementById('boot-msg');
   const onboardingEl = document.getElementById('onboarding');
   const arenaEl = document.getElementById('arena');
   const predictionGrid = document.getElementById('prediction-grid');
@@ -17,7 +21,7 @@
 
   const statusTitle = document.getElementById('status-title');
   const statusSub = document.getElementById('status-sub');
-  const statusIcon = document.querySelector('#status-card .status-icon');
+  const statusIcon = document.getElementById('status-icon');
   const myName = document.getElementById('my-name');
   const myPrediction = document.getElementById('my-prediction');
   const myScore = document.getElementById('my-score');
@@ -28,10 +32,24 @@
   const voteGrid = document.getElementById('vote-grid');
   const voteError = document.getElementById('vote-error');
 
+  const winnerReveal = document.getElementById('winner-reveal');
+  const wrKicker = document.getElementById('wr-kicker');
+  const wrDistrict = document.getElementById('wr-district');
+  const wrTeam = document.getElementById('wr-team');
+  const wrNote = document.getElementById('wr-note');
+
   let onboardingSelection = null;
 
   function districtById(id) {
     return districts.find((d) => d.id === id);
+  }
+
+  function hideBoot() {
+    if (!bootEl || bootEl.classList.contains('hide')) return;
+    bootEl.classList.add('hide');
+    setTimeout(() => {
+      bootEl.hidden = true;
+    }, 500);
   }
 
   function showToast(message) {
@@ -45,11 +63,12 @@
 
   function renderDistrictGrid(container, { selectedId, onSelect }) {
     container.innerHTML = '';
-    districts.forEach((d) => {
+    districts.forEach((d, index) => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'district-card' + (d.id === selectedId ? ' selected' : '');
       card.style.setProperty('--card-color', d.color);
+      card.style.setProperty('--i', index);
       card.innerHTML = `
         <span class="district-dot"></span>
         <span class="district-name">${d.district}</span>
@@ -87,7 +106,7 @@
     if (live) {
       const voted = Boolean(player.votes[live.id]);
       statusIcon.textContent = voted ? '✅' : '🔥';
-      statusTitle.textContent = voted ? `Vote Locked In!` : `LIVE NOW: ${live.name}`;
+      statusTitle.textContent = voted ? 'Vote Locked In!' : `Live: ${live.name}`;
       statusSub.textContent = voted
         ? `Watching Game ${live.order}: ${live.name}. Good luck, Tribute.`
         : `Cast your vote for Game ${live.order} now!`;
@@ -96,7 +115,7 @@
     const next = findNextPendingGame();
     if (next) {
       statusIcon.textContent = '⏳';
-      statusTitle.textContent = 'Waiting for the Capitol...';
+      statusTitle.textContent = 'Waiting for the Capitol…';
       statusSub.textContent = `Next up: Game ${next.order} — ${next.name}`;
       return;
     }
@@ -107,9 +126,10 @@
 
   function renderGamesList() {
     gamesList.innerHTML = '';
-    sortedGames().forEach((game) => {
+    sortedGames().forEach((game, index) => {
       const row = document.createElement('div');
       row.className = 'game-row' + (game.status === 'live' ? ' is-live' : '');
+      row.style.setProperty('--i', index);
 
       let badge = '<span class="badge badge-pending">Pending</span>';
       if (game.status === 'live') badge = '<span class="badge badge-live">● Live</span>';
@@ -118,7 +138,8 @@
       let winnerLine = '';
       if (game.status === 'ended' && game.winner) {
         const w = districtById(game.winner);
-        winnerLine = `<div class="game-winner">Winner: ${w ? w.team : ''}</div>`;
+        const correct = player.votes[game.id] === game.winner;
+        winnerLine = `<div class="game-winner">Winner: ${w ? w.team : ''}${correct ? ' · +1 for you ✓' : ''}</div>`;
       } else if (game.status === 'live') {
         const voted = player.votes[game.id];
         winnerLine = voted
@@ -132,7 +153,6 @@
         <div class="game-order">${game.order}</div>
         <div><div class="game-name">${game.name}</div>${winnerLine}</div>
         ${badge}
-        <div></div>
       `;
       gamesList.appendChild(row);
     });
@@ -166,6 +186,55 @@
     }
   }
 
+  function showWinnerReveal(game) {
+    const w = districtById(game.winner);
+    if (!w) return;
+    const myVote = player.votes[game.id];
+    winnerReveal.style.setProperty('--wr-color', w.color);
+    wrKicker.textContent = `The Victor of Round ${game.order}`;
+    wrDistrict.textContent = w.district;
+    wrTeam.textContent = w.team;
+
+    if (myVote === game.winner) {
+      wrNote.textContent = '✓ Your vote was true — +1 point!';
+      wrNote.style.color = 'var(--color-success)';
+      wrNote.style.borderColor = 'rgba(88, 201, 141, 0.5)';
+    } else if (myVote) {
+      wrNote.textContent = '✗ The odds were not in your favour.';
+      wrNote.style.color = 'var(--color-text-dim)';
+      wrNote.style.borderColor = 'var(--color-border)';
+    } else {
+      wrNote.textContent = 'No vote cast this round.';
+      wrNote.style.color = 'var(--color-text-dim)';
+      wrNote.style.borderColor = 'var(--color-border)';
+    }
+
+    winnerReveal.classList.remove('leaving');
+    winnerReveal.hidden = false;
+    clearTimeout(showWinnerReveal.timer);
+    showWinnerReveal.timer = setTimeout(() => {
+      winnerReveal.classList.add('leaving');
+      setTimeout(() => {
+        winnerReveal.hidden = true;
+      }, 500);
+    }, REVEAL_DURATION);
+  }
+
+  function detectRevealAndUpdate(newGames) {
+    if (player) {
+      newGames.forEach((game) => {
+        const was = lastGameStatus[game.id];
+        if (was && was !== 'ended' && game.status === 'ended' && game.winner) {
+          showWinnerReveal(game);
+        }
+      });
+    }
+    lastGameStatus = {};
+    newGames.forEach((game) => {
+      lastGameStatus[game.id] = game.status;
+    });
+  }
+
   function castVote(gameId) {
     if (!voteSelection) return;
     socket.emit('player:vote', { playerId: player.id, gameId, districtId: voteSelection }, (res) => {
@@ -185,6 +254,7 @@
   function enterArena() {
     onboardingEl.hidden = true;
     arenaEl.hidden = false;
+    hideBoot();
     renderArena();
     fetch('/api/leaderboard')
       .then((r) => r.json())
@@ -222,6 +292,7 @@
         }
         player = res.player;
         games = res.games;
+        detectRevealAndUpdate(games);
         localStorage.setItem(STORAGE_KEY, player.id);
         enterArena();
       }
@@ -230,6 +301,7 @@
 
   socket.on('state:update', (payload) => {
     games = payload.games;
+    detectRevealAndUpdate(games);
     if (player) renderArena();
   });
 
@@ -242,6 +314,9 @@
     const data = await res.json();
     districts = data.districts;
     games = data.games;
+    games.forEach((game) => {
+      lastGameStatus[game.id] = game.status;
+    });
     renderOnboardingGrid();
 
     const savedId = localStorage.getItem(STORAGE_KEY);
@@ -253,10 +328,12 @@
           enterArena();
         } else {
           localStorage.removeItem(STORAGE_KEY);
+          hideBoot();
           onboardingEl.hidden = false;
         }
       });
     } else {
+      hideBoot();
       onboardingEl.hidden = false;
     }
   }

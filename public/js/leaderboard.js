@@ -20,36 +20,40 @@
     if (live) {
       const chip = document.createElement('span');
       chip.className = 'badge badge-live';
-      chip.style.fontSize = '1rem';
-      chip.style.padding = '0.6rem 1.2rem';
       chip.textContent = `● LIVE: Game ${live.order} — ${live.name}`;
       liveStrip.appendChild(chip);
     } else {
       const chip = document.createElement('span');
       chip.className = 'badge badge-pending';
-      chip.style.fontSize = '1rem';
-      chip.style.padding = '0.6rem 1.2rem';
-      chip.textContent = ended === games.length ? 'All Games Complete' : 'Waiting for next game...';
+      chip.textContent = ended === games.length ? '🏆 All Games Complete' : 'Waiting for next game…';
       liveStrip.appendChild(chip);
     }
+  }
+
+  function rankCell(rank) {
+    if (rank <= 3) {
+      return `<span class="medal m${rank}">${rank}</span>`;
+    }
+    return `#${rank}`;
   }
 
   function renderLeaderboard(leaderboard) {
     tbody.innerHTML = '';
     if (leaderboard.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join...</td></tr>';
+        '<tr><td colspan="4" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join…</td></tr>';
       return;
     }
-    leaderboard.forEach((row) => {
+    leaderboard.forEach((row, index) => {
       const pred = districtById(row.overallPrediction);
       const tr = document.createElement('tr');
-      tr.className = row.rank === 1 ? 'rank-1' : '';
+      tr.className = row.rank <= 3 ? `rank-${row.rank}` : '';
+      tr.style.setProperty('--i', index);
       tr.innerHTML = `
-        <td class="rank-cell">#${row.rank}</td>
-        <td>${row.name}</td>
+        <td class="rank-cell">${rankCell(row.rank)}</td>
+        <td class="lb-name">${row.name}</td>
         <td>
-          ${pred ? `<span class="prediction-chip" style="--chip-color:${pred.color}">${pred.district} · ${pred.team}</span>` : '—'}
+          ${pred ? `<span class="prediction-chip" style="--chip-color:${pred.color}"><span class="district-dot" style="--card-color:${pred.color};width:10px;height:10px;"></span>${pred.district} · ${pred.team}</span>` : '—'}
         </td>
         <td class="score-cell">${row.score}</td>
       `;

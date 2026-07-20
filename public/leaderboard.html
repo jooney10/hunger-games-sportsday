@@ -5,39 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Leaderboard — Reassured Sports Day</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <style>
-    .leaderboard-hero {
-      text-align: center;
-      padding: var(--space-lg) 0 var(--space-md);
-    }
-    #leaderboard-table td:nth-child(2) {
-      font-size: 1.15rem;
-      font-weight: 700;
-    }
-    .prediction-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.2rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid var(--chip-color, var(--color-border));
-      font-size: 0.85rem;
-    }
-    .score-cell {
-      font-family: var(--font-display);
-      font-size: 1.4rem;
-      color: var(--color-gold-bright);
-    }
-    .live-strip {
-      display: flex;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-bottom: var(--space-md);
-    }
-  </style>
 </head>
-<body>
+<body class="leaderboard-page">
   <div class="embers" id="embers"></div>
 
   <div class="page">
@@ -48,7 +17,8 @@
 
     <main>
       <div class="leaderboard-hero">
-        <h1 class="hero-title">THE LEADERBOARD</h1>
+        <div class="mono-tag">Panem Standings</div>
+        <h1 class="hero-title gradient-text">THE LEADERBOARD</h1>
         <p class="hero-sub">May the odds be ever in your favour.</p>
       </div>
 
@@ -66,7 +36,7 @@
               </tr>
             </thead>
             <tbody id="leaderboard-body">
-              <tr><td colspan="4" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join...</td></tr>
+              <tr><td colspan="4" style="text-align:center;color:var(--color-text-dim);">Waiting for tributes to join…</td></tr>
             </tbody>
           </table>
         </div>

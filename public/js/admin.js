@@ -112,9 +112,10 @@
     const eligibleId = nextUpGameId();
     const liveExists = anyLive();
 
-    sortedGames().forEach((game) => {
+    sortedGames().forEach((game, index) => {
       const row = document.createElement('div');
       row.className = 'game-row' + (game.status === 'live' ? ' is-live' : '');
+      row.style.setProperty('--i', index);
 
       let badge = '<span class="badge badge-pending">Pending</span>';
       if (game.status === 'live') badge = '<span class="badge badge-live">● Live</span>';
